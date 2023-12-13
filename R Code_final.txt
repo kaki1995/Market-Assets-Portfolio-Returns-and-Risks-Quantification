@@ -1,0 +1,1407 @@
+#POINT 2
+
+#Install packages to read excel
+install.packages("readxl")
+library("readxl")
+install.packages("xts")
+library(xts)
+
+#Import 10 assets from Excel into R
+our_portfolio <- read_excel("Final_portfolio.xlsx", 
+                            col_types = c("date", "numeric", "numeric", 
+                                          "numeric", "numeric", "numeric", 
+                                          "numeric", "numeric", "numeric", 
+                                          "numeric", "numeric"))
+
+
+#View our_portfolio
+our_portfolio
+
+#Convert our_portfolio$Date to #Date 
+our_portfolio$Date <-as.Date(our_portfolio$Date, "%Y-%m-%d")
+class(our_portfolio$Date)
+
+#Convert our_portfolio dataframe into xts object
+our_portfolio<-as.xts(our_portfolio[,-1], our_portfolio$Date)                                              
+
+#Omit missing data and view portfolio
+our_portfolio<-na.omit(our_portfolio)
+our_portfolio
+
+#Plot our_portfolio
+plot.zoo(our_portfolio,main="Closing Prices of 10 Assets", xlab= "Date",col="black")
+
+#============================================
+
+#POINT 3
+
+#calculate logarithmic daily returns
+log_returns <- diff(log(our_portfolio), lag=1)
+log_returns
+
+#count missing values
+sum(is.na(log_returns))
+
+#omit missing data again
+log_returns<-na.omit(log_returns)
+
+#check whether there's still missing data
+sum(is.na(log_returns)) 
+
+#see log daily returns
+log_returns
+
+#plot time series
+plot(log_returns$Sugar)
+plot(log_returns$BTC)
+plot(log_returns$Natural)
+plot(log_returns$Bayer)
+plot(log_returns$USD)
+plot(log_returns$YUM)
+plot(log_returns$Disney)
+plot(log_returns$Tiffany)
+plot(log_returns$Wirecard)
+plot(log_returns$Amazon)
+
+#plot histograms
+hist(log_returns$Sugar)
+hist(log_returns$BTC)
+hist(log_returns$Natural)
+hist(log_returns$Bayer)
+hist(log_returns$USD)
+hist(log_returns$YUM)
+hist(log_returns$Disney)
+hist(log_returns$Tiffany)
+hist(log_returns$Wirecard) 
+hist(log_returns$Amazon)
+
+#plot histograms with more breaks
+hist(log_returns$Sugar, nclass=100)
+hist(log_returns$BTC, nclass=100)
+hist(log_returns$Natural, nclass=100)
+hist(log_returns$Bayer, nclass=100)
+hist(log_returns$USD, nclass=100)
+hist(log_returns$YUM, nclass=100)
+hist(log_returns$Disney, nclass=100)
+hist(log_returns$Tiffany, nclass=100)
+hist(log_returns$Wirecard, nclass=100) 
+hist(log_returns$Amazon, nclass=100)
+
+#install packages to create all time series in one
+install.packages("maptools")
+library("maptools")
+
+#alternative way for plotting all time series in one
+plot.zoo(log_returns, main="Portfolio - Daily Logarithmic Returns from 2016 to 2020", xlab="Date")
+
+#alternative way for merging all histograms in one
+install.packages("HistogramTools")
+library("HistogramTools")
+hist1 <- hist(log_returns$Sugar, breaks=-5:5, plot=FALSE)
+hist2 <-hist(log_returns$BTC, breaks=-5:5, plot=FALSE)
+hist3 <-hist(log_returns$Natural, breaks=-5:5, plot=FALSE)
+hist4 <-hist(log_returns$Bayer, breaks=-5:5, plot=FALSE)
+hist5 <-hist(log_returns$USD, breaks=-5:5, plot=FALSE)
+hist6 <-hist(log_returns$YUM, breaks=-5:5, plot=FALSE)
+hist7 <-hist(log_returns$Disney, breaks=-5:5, plot=FALSE)
+hist8 <-hist(log_returns$Tiffany, breaks=-5:5, plot=FALSE)
+hist9 <-hist(log_returns$Wirecard, breaks=-5:5, plot=FALSE) 
+hist10 <-hist(log_returns$Amazon, breaks=-5:5, plot=FALSE)
+hist.sum <- AddHistograms(hist1, hist2, hist3, hist4, hist5, hist6, hist7, hist8, hist9, hist10)
+
+#============================================
+
+#POINT 4
+
+#create a Variance-Covariance Matrix
+cov_matrix<-cov(log_returns)
+cov_matrix
+
+#test if matrix is positive semidefinite
+install.packages("matrixcalc")
+library("matrixcalc")
+is.positive.semi.definite(cov_matrix)
+
+#============================================
+
+
+#POINT 5
+
+#install package to calculate daily logarithmic returns 
+install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+
+#calculate daily logarithmic returns for the given assets, plot them and check the last lines 
+portfolio_A_return <- Return.portfolio(log_returns, weights=NULL, value=1000000)
+plot.zoo(portfolio_A_return, main = "Log Portfolio A Returns")
+print(portfolio_A_return)
+tail(portfolio_A_return)
+
+ALTERNATIVE to first approach:
+  
+  # Point 5 - Investment in naive portfolio
+  # Extract prices from oct 2 2020
+  price_021020<-our_portfolio[nrow(our_portfolio),]
+price_021020
+
+#Calculate amount of positions worth $100.000 on 02 Oct 2020
+naive_positions<-100000/price_021020
+naive_positions
+
+#make naive positions valid for all days
+?matrix
+class(naive_portfolio)
+naive_positions<-as.numeric(naive_positions)
+naive_positions
+matrix_naive_positions<-matrix(rep(naive_positions, times = NROW(our_portfolio)), byrow = TRUE, ncol = 10)
+matrix_naive_positions
+
+#Calculate Naive Portfolio
+naive_portfolio<-our_portfolio*matrix_naive_positions
+
+
+naive_portfolio$sum <- sum(naive_portfolio)
+naive_portfolio
+
+#'Check
+naive_portfolio_021020<-naive_portfolio[nrow(naive_portfolio),]
+naive_portfolio_021020
+
+#Calculate daily log-returns
+naive_portfolio_daily_return<-diff(log(naive_portfolio),lag=1)
+naive_portfolio_daily_return
+
+mean(naive_portfolio_daily_return)
+
+#Calculate Returns for the whole Portfolio
+
+log_port_ret_A <- Return.portfolio(naive_portfolio_daily_return, weights=weights, value=1000000, verbose = FALSE)
+
+plot.zoo(log_port_ret_A, main = "Log Portfolio A Returns")
+
+print(log_port_ret_A)
+
+tail(log_port_ret_A)
+
+#============================================
+
+#POINT 6
+
+#install package and create a mean-variance efficient portfolio 
+install.packages ("tseries")
+library(tseries)
+portfolio_B <- portfolio.optim(log_returns, riskless=FALSE, shorts=FALSE, covmat = cov_matrix)
+class(portfolio_B)
+
+#create a vector of weights from optimized portfolio
+portfolio_B_weights<- portfolio_B$pw
+plot(portfolio_B_weights)
+
+#assign asset names for portfolio weights
+names(portfolio_B_weights)<-colnames(log_returns)
+
+#visualize the distribution of optimized portfolio
+barplot(portfolio_B_weights)
+
+#portfolio B return with given weights
+portfolio_B_return <- Return.portfolio(log_returns,weights = portfolio_B_weights,verbose = FALSE)
+portfolio_B_return
+plot.zoo(portfolio_B_return, main = "Portfolio B Returns")
+
+#============================================
+
+#POINT 7
+
+#calculate means for 10 days
+mean_A <- mean(portfolio_A_return) * sqrt(10)
+mean_B <- mean(portfolio_B_return) * sqrt(10)
+
+#calculate variance
+variance_A <- var(portfolio_A_return)
+variance_B <- var(portfolio_B_return)
+
+#calculate standard deviation for 10 days
+standarddev_A <- sqrt(variance_A) * sqrt(10)
+standarddev_B <- sqrt(variance_B) * sqrt(10)
+
+#95% VaR
+VaR_A95 <- mean_A - 1.645 * standarddev_A 
+VaR_B95 <- mean_B - 1.645 * standarddev_B 
+
+#99% VaR
+VaR_A99 <- mean_A - 2.33 * standarddev_A 
+VaR_B99 <- mean_B - 2.33 * standarddev_B 
+
+#show 10-day VaRs
+VaR_A95
+VaR_B95
+VaR_A99
+VaR_B99
+
+#Alternative solution to #POINT 7
+#load ggplot2 library
+library(ggplot2)
+
+#calculate portfolio B probabilities, mean and standard deviation
+portfolio_B_probabilities <- c(0.05,0.01)
+portfolio_B_mean <- mean(portfolio_B_return)
+portfolio_B_sd <- sd(portfolio_B_return)
+
+#calculate VaR for portfolio B and print the outcome
+portfolio_B_VaR <- qnorm(portfolio_B_probabilities, portfolio_B_mean, portfolio_B_sd)
+print(portfolio_B_VaR)
+
+
+#Specify 10 days
+days <- sqrt(10)
+portfolio_B_VaR_10days <- portfolio_B_VaR * days
+
+#Calculate portfolio A probabilities, mean and standard deviation
+portfolio_A_probabilities <- c(0.05, 0.01)
+portfolio_A_mean <- mean(portfolio_A_return)
+portfolio_A_sd <- sd(portfolio_A_return)
+
+#calculate portfolio A VaR andprint the outcome
+portfolio_A_VaR <- qnorm(portfolio_A_probabilities, portfolio_A_mean, portfolio_A_sd)
+print(portfolio_A_VaR)
+
+#Specify 10 days
+portfolio_A_VaR_10days <- portfolio_A_VaR * days
+
+#============================================
+
+#POINT 8
+
+#HISTORICAL SIMULATION - METHODOLOGY 
+
+#METHOD 1 - quantile()
+
+#PORTFOLIO A
+
+#Convert to matrix datatype as zoo datatypes can't be sorted, then sort ascending 
+pf_A_returns.m <- as.matrix(portfolio_A_return)
+pf_A_returns.m
+sorted_A <- pf_A_returns.m[order(pf_A_returns.m[,1])] 
+sorted_A
+
+#Calculate the 10-day VaR, confidence level = 95%
+round(quantile(sorted_A, 0.05, na.rm=TRUE), 4)*sqrt(10)
+
+#Calculate the 10-day VaR, confidence level = 99%
+round(quantile(sorted_A, 0.01, na.rm=TRUE), 4)*sqrt(10)
+
+#PORTFOLIO B
+
+#Convert to matrix datatype as zoo datatypes can't be sorted, then sort ascending 
+pf_B_returns.m <- as.matrix(portfolio_B_return)
+pf_B_returns.m
+sorted_B <- pf_B_returns.m[order(pf_B_returns.m[,1])] 
+sorted_B
+
+#Calculate the 10-day VaR, confidence level = 95%
+round(quantile(sorted_B, 0.05, na.rm=TRUE), 4)*sqrt(10)
+
+#Calculate the 10-day VaR, confidence level = 99%
+round(quantile(sorted_B, 0.01, na.rm=TRUE), 4)*sqrt(10)
+
+#-------------------------------------------
+#METHOD 2: VaR() with method = "historical"
+
+#PORTFOLIO A
+#Calculate the 10-day VaR, confidence level = 95%
+VaR(portfolio_A_return,p=0.95,method="historical")*sqrt(10)
+#Calculate the 10-day VaR, confidence level = 99%
+VaR(portfolio_A_return,p=0.99,method="historical")*sqrt(10)
+
+#PORTFOLIO B
+#Calculate the 10-day VaR, confidence level = 95%
+VaR(portfolio_B_return,p=0.95,method="historical")*sqrt(10)
+#Calculate the 10-day VaR, confidence level = 99%
+VaR(portfolio_B_return,p=0.99,method="historical")*sqrt(10)
+
+#=====================================
+
+#MONTE CARLO SIMULATION - METHODOLOGY 
+
+#PORTFOLIO A
+
+#Create simulation: 
+for (i in 1:1000) {
+  #Create Vector of Returns
+  l<-c()
+  #Generate Future Returns
+  new_Return_A = rnorm(n=1000,mean=mean(portfolio_A_return),sd=sd(portfolio_A_return))
+  #Append return to vector
+  l<-c(l,new_Return_A)
+  
+  #Create Data frame
+  if(i == 1){df=data.frame(l)}
+  else{df<-cbind(l,df)} #Append simulation to dataframe
+}
+#Rename Columns
+for (i in 1:ncol(df)) {
+  col.name <- paste("Simulation",toString(i))
+  names(df)[i] <- col.name
+}
+#Calculate VaR
+future_returns_A <- tail(df,1)
+future_returns_A <- sort(future_returns_A)
+
+#Get Stock Returns at different percentiles
+#quantile fnc produces sameple quantiles corresponding to the given probabilities
+VaR95_A<-quantile(future_returns_A,probs = .05)*sqrt(10) #95% confidence level
+VaR99_A<-quantile(future_returns_A,probs = .01)*sqrt(10) #99% confidence level
+VaR95_A
+VaR99_A
+#-------------------------------
+#PORTFOLIO B
+
+#Create simulation: 
+for (i in 1:1000) {
+  #Create Vector of Returns
+  l<-c()
+  #Generate Future Returns
+  new_Return_B = rnorm(n=1000,mean=mean(portfolio_B_return),sd=sd(portfolio_B_return))
+  #Append return to vector
+  l<-c(l,new_Return_B)
+  
+  #Create Data frame
+  if(i == 1){df=data.frame(l)}
+  else{df<-cbind(l,df)} #Append simulation to dataframe
+}
+#Rename Columns
+for (i in 1:ncol(df)) {
+  col.name <- paste("Simulation",toString(i))
+  names(df)[i] <- col.name
+}
+#Calculate VaR
+future_returns_B <- tail(df,1)
+future_returns_B <- sort(future_returns_B)
+
+
+#Get Stock Returns at different percentiles
+#quantile fnc produces sameple quantiles corresponding to the given probabilities
+VaR95_B<-quantile(future_returns_B,probs = .05)*sqrt(10) #95% confidence level
+VaR99_B<-quantile(future_returns_B,probs = .01)*sqrt(10) #99% confidence level
+VaR95_B
+VaR99_B
+
+#POINT 9 
+#Time dependent variances 100 days
+chart.RollingPerformance(R = portfolio_A_return["2016::2020"], width = 100, FUN = "var", scale = 252, main = "Variance for portfolio A - 100 days rolling time window")
+chart.RollingPerformance(R = portfolio_B_return["2016::2020"], width = 100, FUN = "var", scale = 252, main = "Variance for portfolio B - 100 days rolling time window")
+chart.RollingPerformance(R = log_returns["2016::2020"], width = 100, FUN = "var", scale = 252, main = "Variance for log_returns - 100 days rolling time window")
+
+#Time dependent variances 200 days
+chart.RollingPerformance(R = portfolio_A_return["2016::2020"], width = 200, FUN = "var", scale = 252, main ="Variance for portfolio A - 200 days rolling time window")
+chart.RollingPerformance(R = portfolio_B_return["2016::2020"], width = 200, FUN = "var", scale = 252, main ="Variance for portfolio B - 200 days rolling time window")
+chart.RollingPerformance(R = log_returns["2016::2020"], width = 200, FUN = "var", scale = 252, main ="Variance for log_returns - 200 days rolling time window")
+
+#Time dependent volatilities 100 days
+chart.RollingPerformance(R = portfolio_A_return["2016::2020"], width = 100, FUN = "sd.annualized", scale = 252, main ="Volatility for portfolio A - 100 days rolling time window")
+chart.RollingPerformance(R = portfolio_B_return["2016::2020"], width = 100, FUN = "sd.annualized", scale = 252, main ="Volatility for portfolio B - 100 days rolling time window")
+chart.RollingPerformance(R = log_returns["2016::2020"], width = 100, FUN = "sd.annualized", scale = 252, main ="Volatility for log_returns - 100 days rolling time window")
+
+#Time dependent volatilities 200 days
+chart.RollingPerformance(R = portfolio_A_return["2016::2020"], width = 200, FUN = "sd.annualized", scale = 252, main ="Volatility for portfolio A - 200 days rolling time window")
+chart.RollingPerformance(R = portfolio_B_return["2016::2020"], width = 200, FUN = "sd.annualized", scale = 252, main ="Volatility for portfolio B - 200 days rolling time window")
+chart.RollingPerformance(R = log_returns["2016::2020"], width = 200, FUN = "sd.annualized", scale = 252, main ="Volatility for log_returns - 200 days rolling time window")
+
+
+#alternative approach for Point 9
+
+width_100 <- 100
+width_200 <- 200
+
+#calculate variances for 2 portfolios and 10 assets with 100 days rolling window
+var_log_portfolio_B_return_100 <- chart.RollingPerformance(R = portfolio_B_return, width_100, FUN = "var", main = "Portfolio B Variance with 100 days rolling window")
+plot(var_log_portfolio_B_return_100, main = "Portfolio B Variance with 100 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+var_log_portfolio_A_return_100 <- chart.RollingPerformance(R = portfolio_A_return, width_100, FUN = "var", main = "Portfolio A Variance with 100 days rolling window")
+plot(var_log_portfolio_A_return_100, main = "Portfolio A Variance with 100 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+var_log_returns_100 <- chart.RollingPerformance(R = log_returns, width_100, FUN = "var", main = "Assets Returns with 100 days rolling window")
+plot(var_log_returns_100, main = "Assets Returns with 100 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+
+#Then same actions with window 200 days
+var_log_portfolio_B_return_200 <- chart.RollingPerformance(R = portfolio_B_return, width_200, FUN = "var", main = "Portfolio B Variance with 200 days rolling window")
+plot(var_log_portfolio_B_return_200, main = "Portfolio B Variance with 200 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+var_log_portfolio_A_return_200 <- chart.RollingPerformance(R = portfolio_A_return, width_200, FUN = "var", main = "Portfolio A Variance with 200 days rolling window")
+plot(var_log_portfolio_A_return_200, main = "Portfolio A Variance with 200 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+var_log_returns_200 <- chart.RollingPerformance(R = log_returns, width_200, FUN = "var", main = "Assets Returns with 200 days rolling window")
+plot(var_log_returns_200, main = "Assets Returns with 200 days rolling window", xlab = "date", ylab = colnames(1), col = "green")
+
+#now calculate volatility 
+vol_log_portfolio_B_return_100 <- chart.RollingPerformance(R = portfolio_B_return, width_100, FUN = "sd.annualized", main = "Volatility for portfolio B with 100 days rolling window")
+plot(vol_log_portfolio_B_return_100, main = "Volatility for portfolio B with 100 days rolling window", xlab = "date", ylab = colnames(1), col = "red")
+vol_log_portfolio_A_return_100 <- chart.RollingPerformance(R = portfolio_A_return, width_100, FUN = "sd.annualized", main = "Volatility for portfolio A with 100 days rolling window")
+plot(vol_log_portfolio_A_return_100, main = "Volatility for portfolio A with 100 days rolling window", xlab = "date", ylab = colnames(1), col = "red")
+vol_log_returns_100 <- chart.RollingPerformance(R = log_returns, width_100, FUN = "sd.annualized", main = "Volatility. Assets returns with 100 days rolling window") 
+plot(vol_log_returns_100, main = "Volatility. Assets returns with 100 days rolling window", xlab = "date", elab = colnames(1), col = "red")
+
+# same for 200 rolling window
+vol_log_portfolio_B_return_200 <- chart.RollingPerformance(R = portfolio_B_return, width_200, FUN = "sd.annualized", main = "Volatility for portfolio B with 200 days rolling window")
+plot(vol_log_portfolio_B_return_200, main = "Volatility for portfolio B with 200 days rolling window", xlab = "date", ylab = colnames(1), col = "red")
+vol_log_portfolio_A_return_200 <- chart.RollingPerformance(R = portfolio_A_return, width_200, FUN = "sd.annualized", main = "Volatility for portfolio A with 200 days rolling window")
+plot(vol_log_portfolio_A_return_200, main = "Volatility for portfolio A with 200 days rolling window", xlab = "date", ylab = colnames(1), col = "red")
+vol_log_returns_200 <- chart.RollingPerformance(R = log_returns, width_200, FUN = "sd.annualized", main = "Volatility. Assets returns with 200 days rolling window") 
+plot(vol_log_returns_200, main = "Volatility. Assets returns with 200 days rolling window", xlab = "date", elab = colnames(1), col = "red")
+
+#Point 10
+install.packages("MFTSR", repos="http://R-Forge.R-project.org")
+library(MFTSR)
+
+
+#volatility for portfolio A
+volatility_EWMA_A <- ewmaVol(portfolio_A_return, lambda=0.9)
+vol_EMWA_A<-as.numeric(volatility_EWMA_A$sigma["2020-10-02"])
+vol_EMWA_A
+
+
+#variance for portfolio A
+var_EWMA_A <- vol_EMWA_A^2
+var_EWMA_A
+
+
+# volatility for portfolio B
+volatility_EWMA_B <- ewmaVol(portfolio_B_return, lambda=0.9)
+vol_EMWA_B<-as.numeric(volatility_EWMA_B$sigma["2020-10-02"])
+vol_EMWA_B
+
+#variance for portfolio B
+var_EWMA_B <- vol_EMWA_B^2
+var_EWMA_B
+#==================================
+#Point 11: Mid-term Presentation
+#==================================
+#Point 12
+install.packages("stats4")
+library("stats4")
+install.packages("ggplot2")
+library("ggplot2")
+
+#PORTFOLIO A
+
+#Define a likelihood function in R
+
+likelihoodA<-function(lambda){
+#likelihood function
+  vol_EWMA<-ewmaVol(portfolio_A_return, lambda)
+  vol_EWMA_num<-as.numeric(vol_EWMA$sigma)
+  var_EWMA<-vol_EWMA_num^2
+  result<- sum((-log(var_EWMA)-(portfolio_A_return)^2/var_EWMA))
+  print(result)
+}
+
+#Use optimize function so that the likelihood value -> max
+optimize(likelihoodA,c(0,1), maximum=TRUE, tol=0.001)
+
+#Test with lambda = 90%
+likelihoodA(0.9)
+
+#Test with lambda = 95%
+likelihoodA(0.95)
+
+#Test with lambda = 80%
+likelihoodA(0.8)
+
+#FAIL to create plot for likelihood function with different lambda
+#First attempt <-Failed! as 'x' and 'y' lengths differ
+x<-seq(0.01,0.99,by=0.01)
+y<-likelihoodA(x)
+plot(x,y,type=l)
+
+#Second attempt <- we can see all the possible results but fail to store values from the loop to their equivalent lambdas
+for (i in seq(0.01,0.99,by=0.01)){
+  y<-likelihoodA(i)
+}
+
+#PORTFOLIO B
+
+#Define a similar function like likelihoodA - call it "likelihoodB"
+
+likelihoodB<-function(lambda){
+  #likelihood function
+  vol_EWMA<-ewmaVol(portfolio_B_return, lambda)
+  vol_EWMA_num<-as.numeric(vol_EWMA$sigma)
+  var_EWMA<-vol_EWMA_num^2
+  result<- sum((-log(var_EWMA)-(portfolio_B_return)^2/var_EWMA))
+  print(result)
+}
+
+#Use optimize function so that the likelihood value -> max
+optimize(likelihoodB,c(0,1), maximum=TRUE, tol=0.001)
+
+#Test with lambda = 90%
+likelihoodB(0.9)
+
+#Test with lambda = 95%
+likelihoodB(0.95)
+
+#Test with lambda = 80%
+likelihoodB(0.8)
+
+#====================================================================
+
+#Point 13
+
+#DIANA'S PART
+#Calculate GARCH (1,1) volatilities using "Rugarch" package
+install.packages("rugarch")
+library(rugarch)
+
+garchspec <- ugarchspec(mean.model = list(armaOrder = c(1,1)), 
+                        variance.model = list(model = "eGARCH", garchOrder = c(1,1)), 
+                        distribution.model = "norm")
+
+garchfit_B <- ugarchfit(data = portfolio_B_return, spec = garchspec)
+
+garchfit_B
+
+garchvol_B <- sigma(garchfit_B)
+
+garchvol_B
+
+plot(garchvol_B, main = "Volatility of Portfolio B using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_A <- ugarchfit(data = portfolio_A_return, spec = garchspec)
+
+garchfit_A
+
+garchvol_A <- sigma(garchfit_A)
+
+plot(garchvol_A, main = "Volatility of Portfolio A using GARCH (1,1) with maximum likelihood estimators")
+
+
+#Calculate conditional variances  and plot variance's time series for both portfolios
+garchfit_B_var <- garchfit_B@fit$var
+plot(garchfit_B_var, type = "l")
+
+garchfit_A_var <- garchfit_A@fit$var
+plot(garchfit_A_var, type = "l")
+
+#Now we will do the same actions for assets
+garchfit_BTCEUR <- ugarchfit(data = log_returns$`BTC-EUR`, spec = garchspec)
+garchfit_BTCEUR
+
+garchfit_BTCEUR_var <- garchfit_BTCEUR@fit$var
+plot(garchfit_BTCEUR_var, type = "l")
+
+garchvol_BTCEUR <- sigma(garchfit_BTCEUR)
+plot(garchvol_BTCEUR, main = "Volatility of BTC-EUR using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_sugar <- ugarchfit(data = log_returns$Sugar, spec = garchspec)
+garchfit_sugar
+
+garchfit_sugar_var <- garchfit_sugar@fit$var
+plot(garchfit_sugar_var, type = "l")
+
+garchvol_sugar <- sigma(garchfit_sugar)
+plot(garchvol_sugar, main = "Volatility of Sugar using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_amazon <- ugarchfit(data = log_returns$Amazon, spec = garchspec)
+garchfit_amazon
+
+garchfit_amazon_var <- garchfit_amazon@fit$var
+plot(garchfit_amazon_var, type = "l")
+
+garchvol_amazon <- sigma(garchfit_amazon)
+plot(garchvol_amazon, main = "Volatility of Amazon using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_wirecard <- ugarchfit(data = log_returns$Wirecard, spec = garchspec)
+garchfit_wirecard
+
+garchfit_wirecard_var <- garchfit_wirecard@fit$var
+plot(garchfit_wirecard_var, type = "l")
+
+garchvol_wirecard <- sigma(garchfit_wirecard)
+plot(garchvol_wirecard, main = "Volatility of Wirecard using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_tiffany <- ugarchfit(data = log_returns$Tiffany, spec = garchspec)
+garchfit_tiffany
+
+garchfit_tiffany_var <- garchfit_tiffany@fit$var
+plot(garchfit_tiffany_var, type = "l")
+
+garchvol_tiffany <- sigma(garchfit_tiffany)
+plot(garchvol_tiffany, main = "Volatility of Tiffany using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_disney <- ugarchfit(data = log_returns$Disney, spec = garchspec)
+garchfit_disney
+
+garchfit_disney_var <- garchfit_disney@fit$var
+plot(garchfit_disney_var, type = "l")
+
+garchvol_disney <- sigma(garchfit_disney)
+plot(garchvol_disney, main = "Volatility of Disney using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_YUM <- ugarchfit(data = log_returns$YUM, spec = garchspec)
+garchfit_YUM
+
+garchfit_YUM_var <- garchfit_YUM@fit$var
+plot(garchfit_YUM_var, type = "l")
+
+garchvol_YUM <- sigma(garchfit_YUM)
+plot(garchvol_YUM, main = "Volatility of YUM using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_USDEUR <- ugarchfit(data = log_returns$`USD/EUR`, spec = garchspec)
+garchfit_USDEUR
+
+garchfit_USDEUR_var <- garchfit_USDEUR@fit$var
+plot(garchfit_USDEUR_var, type = "l")
+
+garchvol_USDEUR <- sigma(garchfit_USDEUR)
+plot(garchvol_USDEUR, main = "Volatility of USD/EUR using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_bayer <- ugarchfit(data = log_returns$Bayer, spec = garchspec)
+garchfit_bayer
+
+garchfit_bayer_var <- garchfit_bayer@fit$var
+plot(garchfit_bayer_var, type = "l")
+
+garchvol_bayer <- sigma(garchfit_bayer)
+plot(garchvol_bayer, main = "Volatility of Bayer using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_natural_gas <- ugarchfit(data = log_returns$`Natural Gas`, spec = garchspec)
+garchfit_natural_gas
+
+garchfit_natural_gas_var <- garchfit_natural_gas@fit$var
+plot(garchfit_natural_gas_var, type = "l")
+
+garchvol_natural_gas <- sigma(garchfit_natural_gas)
+plot(garchvol_natural_gas, main = "Volatility of Natural Gas using GARCH (1,1) with maximum likelihood estimators")
+#----------------------------------------------------------------------------------------
+# YEN'S PART
+
+# YEN'S PART
+
+# Plot volatility of each individual asset for both portfolios
+
+#Create time series return for each asset of both portfolio
+install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+assets_A_return <- Return.portfolio(log_returns, weights=NULL, verbose = TRUE)
+assets_A_return <- assets_A_return$contribution
+assets_B_return <- Return.portfolio(log_returns,weights = portfolio_B_weights,verbose = TRUE)
+assets_B_return <- assets_B_return$contribution
+
+#Plot volatility of each assets in Portfolio A
+nA<-c(1,2,3,4,5,6,7,8,9,10)
+
+lapply(nA,function(i) {
+  garchfit_asset_A <- ugarchfit (data = assets_A_return[,i],spec = garchspec)
+  garch_vol_asset_A <- sigma(garchfit_asset_A)
+  plot.zoo(garch_vol_asset_A, main = colnames(assets_A_return[,i]), 
+           ylab = "GARCH (1,1) Volatility of Portfolio A", xlab = "Date", col = "darkblue",lwd = 2)
+})
+
+#Plot volatility of each assets in Portfolio B
+
+nB<-c(1,2,3,5,6,7,8,9,10)
+
+lapply(nB,function(j) {
+  garchfit_asset_B <- ugarchfit (data = assets_B_return[,j],spec = garchspec)
+  garch_vol_asset_B <- sigma(garchfit_asset_B)
+  plot.zoo(garch_vol_asset_B, main = colnames(assets_B_return[,j]),
+           ylab = "GARCH (1,1) Volatility of Portfolio B", xlab = "Date", col = "brown", lwd = 2)
+})
+#-------------------------------------------------------------------------------------
+#APPROACH 2: Using maximum likelihood method from scratch
+
+# Define likelihood function for calculating variances
+
+para=c(0.000002,0.1,0.9)
+
+garch_loglikelihood<-function(para,return,mu){
+  # Parameters
+  omega=para[1]
+  alpha=para[2]
+  beta=para[3]
+  # Volatility and log likelihood initialization
+  loglik=0
+  var<-var(return)
+  mu<-mean(return)
+  # Start of the loop
+  vol=c()
+  for (i in 2:length(return)){
+    var=omega+alpha*(return[i-1]-mu)^2+beta*var
+    loglik=loglik+dnorm(return[i],mu,sqrt(var),log=TRUE)
+  }
+  print(para)
+  return(-loglik)
+}
+
+#Identify omega, alpha, beta of GARCH (1,1) using optimization method
+port_A_para<-optim(para, garch_loglikelihood, gr=NULL, as.numeric(portfolio_A_return),0)
+port_A_para$par
+
+port_B_para<-optim(para, garch_loglikelihood, gr=NULL, as.numeric(portfolio_B_return),0)
+port_B_para$par
+
+#Using the maximized parameters to calculate GARCH(1,1) variance and volatility
+
+#Portfolio A
+omega_A <-port_A_para$par[1]
+alpha_A <-port_A_para$par[2]
+beta_A <-port_A_para$par[3]
+expect_return_A<- portfolio_A_return - mean(portfolio_A_return)
+expect_return_A_2 <-expect_return_A^2
+
+nobs_A<-length(portfolio_A_return) #Number of observations 
+predvar_A<-rep(NA,nobs_A) 
+predvar_A[1]<-var(portfolio_A_return) #Start the loop with variance of portfolio A
+#Loop starting at 2 because of the lagged predictor
+for(i in 2:nobs){
+  predvar_A[i]<- omega_A + alpha_A*expect_return_A_2[i-1] + beta_A * predvar_A[i-1]
+}
+
+#Predicted variance 
+predvar_A<-xts(predvar_A, order.by = time(portfolio_A_return))
+plot.zoo(predvar_A,main = "GARCH(1,1) Variance of Portfolio A", col = "blue",
+         lwd = 2, xlab = "Time")
+
+#Predicted volatility
+predvol_A<-sqrt(predvar_A)
+predvol_A<-xts(predvol_A,order.by=time(portfolio_A_return))
+plot.zoo(predvol_A, main = "GARCH(1,1) Volatility of Portfolio A", col = "brown",
+         lwd = 2, xlab = "Time")
+
+#Portfolio B
+omega_B <-port_B_para$par[1]
+alpha_B <-port_B_para$par[2]
+beta_B <-port_B_para$par[3]
+expect_return_B<- portfolio_B_return - mean(portfolio_B_return)
+expect_return_B_2 <-expect_return_B^2
+
+nobs_B<-length(portfolio_B_return) #Number of observations 
+predvar_B<-rep(NA,nobs_B) 
+predvar_B[1]<-var(portfolio_B_return) #Start the loop with variance of portfolio B
+#Loop starting at 2 because of the lagged predictor
+for(i in 2:nobs){
+  predvar_B[i]<- omega_B + alpha_B*expect_return_B_2[i-1] + beta_B * predvar_B[i-1]
+}
+#Predicted variance 
+predvar_B<-xts(predvar_B, order.by = time(portfolio_B_return))
+plot.zoo(predvar_B,main = "GARCH(1,1) Variance of Portfolio B", col = "blue",
+         lwd = 2, xlab = "Time")
+#Predicted volatility
+predvol_B<-sqrt(predvar_B)
+predvol_B<-xts(predvol_B,order.by=time(portfolio_B_return))
+plot.zoo(predvol_B, main = "GARCH(1,1) Volatility of Portfolio B", col = "brown",
+         lwd = 2, xlab = "Time")
+
+#--------------------------------------------------------------------------------
+#Plot volatility of both portfolio using GARCH (1,1) and EWMA applying maximum likelihood method
+
+#Portfolio A
+EWMA_port_A <- ewmaVol(portfolio_A_return, lambda=0.9318299)
+EWMA_vol_A<- EWMA_port_A$sigma
+
+EWMA_garch_A<-merge.xts(garchvol_A,EWMA_vol_A)
+plot.zoo(EWMA_garch_A,main = "Volatility of Portfolio A with maximum likelihood estimators",xlab="Date",
+         screen=factor(1,1), col = c("steelblue","brown"),lwd = 2)
+  legend("topleft",
+       legend=c("EWMA (lambda = 0.9318)","GARCH(1,1)"),
+       col=c("steelblue","brown"),
+       lty=c(1,1))
+
+
+#Portfolio B
+EWMA_port_B <- ewmaVol(portfolio_B_return, lambda=0.9397357)
+EWMA_vol_B<- EWMA_port_B$sigma
+
+EWMA_garch_B <-merge.xts(garchvol_B,EWMA_vol_B)
+plot.zoo(EWMA_garch_B,main = "Volatility of Portfolio B with maximum likelihood estimators",xlab = "Date",
+         screen=factor(1,1), col = c("steelblue","brown"),lwd = 2)
+legend("topleft",
+       legend=c("EWMA (lambda = 0.9397)","GARCH(1,1)"),
+       col=c("steelblue","brown"),
+       lty=c(1,1))
+
+
+#==============================================================================================================
+
+#Point 14 
+#Point 14.1 
+#Install packages to read excel
+install.packages("readxl")
+library("readxl")
+install.packages("xts")
+library(xts)
+
+#Import 10 assets from Excel into R
+our_updated_portfolio <- read_excel("~/Dropbox/Risk Management/Updated_portfolio_data_till Dec 23, 2020 .xlsx", 
+                                    col_types = c("date", "numeric", "numeric", 
+                                                  "numeric", "numeric", "numeric", 
+                                                  "numeric", "numeric", "numeric", 
+                                                  "numeric", "numeric"))
+
+
+#View our_updated_portfolio
+our_updated_portfolio
+
+#Convert our_updated_portfolio$Date to #Date 
+our_updated_portfolio$Date <-as.Date(our_updated_portfolio$Date, "%Y-%m-%d")
+class(our_updated_portfolio$Date)
+
+#Convert our_updated_portfolio dataframe into xts object
+our_updated_portfolio<-as.xts(our_updated_portfolio[,-1], our_updated_portfolio$Date)                                              
+
+#Omit missing data and view portfolio
+our_updated_portfolio<-na.omit(our_updated_portfolio)
+our_updated_portfolio
+
+#Plot our_updated_portfolio
+plot.zoo(our_updated_portfolio,main="Closing Prices of 10 Assets", xlab= "Date",col="black")
+
+#============================================
+
+#Point 14.2 
+#We should also update points 3 to 6 considering new data till December 23rd, 2020, so that EWMA and GARCH models provide us with relevant results
+
+#calculate logarithmic daily returns
+log_returns_updated <- diff(log(our_updated_portfolio), lag=1)
+log_returns_updated
+
+#count missing values
+sum(is.na(log_returns_updated))
+
+#omit missing data again
+log_returns_updated<-na.omit(log_returns_updated)
+
+#check whether there's still missing data
+sum(is.na(log_returns_updated)) 
+
+#see log daily returns
+log_returns_updated
+
+#plot time series
+plot(log_returns_updated$Sugar)
+plot(log_returns_updated$BTC)
+plot(log_returns_updated$Natural)
+plot(log_returns_updated$Bayer)
+plot(log_returns_updated$USD)
+plot(log_returns_updated$YUM)
+plot(log_returns_updated$Disney)
+plot(log_returns_updated$Tiffany)
+plot(log_returns_updated$Wirecard)
+plot(log_returns_updated$Amazon)
+
+#plot histograms
+hist(log_returns_updated$Sugar)
+hist(log_returns_updated$BTC)
+hist(log_returns_updated$Natural)
+hist(log_returns_updated$Bayer)
+hist(log_returns_updated$USD)
+hist(log_returns_updated$YUM)
+hist(log_returns_updated$Disney)
+hist(log_returns_updated$Tiffany)
+hist(log_returns_updated$Wirecard) 
+hist(log_returns_updated$Amazon)
+
+#install packages to create all time series in one
+install.packages("maptools")
+library("maptools")
+
+#alternative way for plotting all time series in one
+plot.zoo(log_returns_updated, main="Portfolio - Daily Logarithmic Returns from 2016 to 2020", xlab="Date")
+
+#alternative way for merging all histograms in one
+install.packages("HistogramTools")
+library("HistogramTools")
+hist1 <- hist(log_returns_updated$Sugar, breaks=-5:5, plot=FALSE)
+hist2 <-hist(log_returns_updated$BTC, breaks=-5:5, plot=FALSE)
+hist3 <-hist(log_returns_updated$Natural, breaks=-5:5, plot=FALSE)
+hist4 <-hist(log_returns_updated$Bayer, breaks=-5:5, plot=FALSE)
+hist5 <-hist(log_returns_updated$USD, breaks=-5:5, plot=FALSE)
+hist6 <-hist(log_returns_updated$YUM, breaks=-5:5, plot=FALSE)
+hist7 <-hist(log_returns_updated$Disney, breaks=-5:5, plot=FALSE)
+hist8 <-hist(log_returns_updated$Tiffany, breaks=-5:5, plot=FALSE)
+hist9 <-hist(log_returns_updated$Wirecard, breaks=-5:5, plot=FALSE) 
+hist10 <-hist(log_returns_updated$Amazon, breaks=-5:5, plot=FALSE)
+hist.sum <- AddHistograms(hist1, hist2, hist3, hist4, hist5, hist6, hist7, hist8, hist9, hist10)
+
+#create a Variance-Covariance Matrix
+cov_matrix_updated<-cov(log_returns_updated)
+cov_matrix_updated
+
+#test if matrix is positive semidefinite
+install.packages("matrixcalc")
+library("matrixcalc")
+is.positive.semi.definite(cov_matrix_updated)
+
+
+#install package to calculate daily logarithmic returns 
+install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+
+#calculate daily logarithmic returns for the given assets, plot them and check the last lines 
+portfolio_A_return_updated <- Return.portfolio(log_returns_updated, weights=NULL, value=1000000)
+plot.zoo(portfolio_A_return_updated, main = "Log Portfolio A Returns")
+print(portfolio_A_return_updated)
+tail(portfolio_A_return_updated)
+
+#install package and create a mean-variance efficient portfolio 
+install.packages ("tseries")
+library(tseries)
+portfolio_B_updated <- portfolio.optim(log_returns_updated, riskless=FALSE, shorts=FALSE, covmat = cov_matrix_updated)
+class(portfolio_B_updated)
+
+#create a vector of weights from optimized portfolio
+portfolio_B_weights_updated <- portfolio_B_updated$pw
+plot(portfolio_B_weights_updated)
+
+#assign asset names for portfolio weights
+names(portfolio_B_weights_updated)<-colnames(log_returns_updated)
+
+#visualize the distribution of optimized portfolio
+barplot(portfolio_B_weights_updated)
+
+#portfolio B return with given weights
+portfolio_B_return_updated <- Return.portfolio(log_returns_updated,weights = portfolio_B_weights_updated,verbose = FALSE)
+portfolio_B_return_updated
+plot.zoo(portfolio_B_return_updated, main = "Portfolio B Returns")
+
+#Update Point 12 here, because it includes optimized EWMA results
+install.packages("stats4")
+library("stats4")
+install.packages("ggplot2")
+library("ggplot2")
+
+#PORTFOLIO A
+
+#Define a likelihood function in R
+
+likelihoodA<-function(lambda){
+  #likelihood function
+  vol_EWMA_updated <-ewmaVol(portfolio_A_return_updated, lambda)
+  vol_EWMA_num_updated <-as.numeric(vol_EWMA_updated$sigma)
+  var_EWMA_updated <-vol_EWMA_num_updated^2
+  result<- sum((-log(var_EWMA_updated)-(portfolio_A_return_updated)^2/var_EWMA_updated))
+  print(result)
+}
+
+optimize(likelihoodA,c(0,1), maximum=TRUE, tol=0.001)
+
+#Test with lambda = 90%
+likelihoodB(0.9)
+
+#Test with lambda = 95%
+ikelihoodA(0.95)
+
+#Test with lambda = 80%
+likelihoodA(0.8)
+
+
+#PORTFOLIO B
+
+likelihoodB<-function(lambda){
+  #likelihood function
+  vol_EWMA_updated <-ewmaVol(portfolio_B_return_updated, lambda)
+  vol_EWMA_num_updated <-as.numeric(vol_EWMA_updated$sigma)
+  var_EWMA_updated <-vol_EWMA_num_updated^2
+  result<- sum((-log(var_EWMA_updated)-(portfolio_B_return_updated)^2/var_EWMA_updated))
+  print(result)
+}
+
+optimize(likelihoodB,c(0,1), maximum=TRUE, tol=0.001)
+
+#Test with lambda = 90%
+likelihoodB(0.9)
+
+#Test with lambda = 95%
+likelihoodB(0.95)
+
+#Test with lambda = 80%
+likelihoodB(0.8)
+
+#Update Point 13, too:
+#DIANA'S PART
+#Calculate GARCH (1,1) volatilities using "Rugarch" package
+install.packages("rugarch")
+library(rugarch)
+
+garchspec <- ugarchspec(mean.model = list(armaOrder = c(1,1)), 
+                        variance.model = list(model = "eGARCH", garchOrder = c(1,1)), 
+                        distribution.model = "norm")
+
+garchfit_B_updated <- ugarchfit(data = portfolio_B_return_updated, spec = garchspec)
+
+garchfit_B_updated
+
+garchvol_B_updated <- sigma(garchfit_B_updated)
+
+garchvol_B_updated
+
+plot(garchvol_B_updated, main = "Volatility of Portfolio B using GARCH (1,1) with maximum likelihood estimators")
+
+garchfit_A_updated <- ugarchfit(data = portfolio_A_return_updated, spec = garchspec)
+
+garchfit_A_updated
+
+garchvol_A_updated <- sigma(garchfit_A_updated)
+
+plot(garchvol_A_updated, main = "Volatility of Portfolio A using GARCH (1,1) with maximum likelihood estimators")
+
+#----------------------------------------------------------------------------------------
+# YEN'S PART
+
+#APPROACH 2 (cross-checking): Using maximum likelihood method from scratch
+
+# Define likelihood function for calculating variances
+para=c(0.000002,0.1,0.9)
+
+garch_loglikelihood<-function(para,return,mu){
+  # Parameters
+  omega=para[1]
+  alpha=para[2]
+  beta=para[3]
+  # Volatility and log likelihood initialization
+  loglik=0
+  var<-var(return)
+  mu<-mean(return)
+  # Start of the loop
+  vol=c()
+  for (i in 2:length(return)){
+    var=omega+alpha*(return[i-1]-mu)^2+beta*var
+    loglik=loglik+dnorm(return[i],mu,sqrt(var),log=TRUE)
+  }
+  print(para)
+  return(-loglik)
+}
+
+#Identify omega, alpha, beta of GARCH (1,1) using optimization method
+port_A_para<-optim(para, garch_loglikelihood, gr=NULL, as.numeric(portfolio_A_return),0)
+port_A_para$par
+
+port_B_para<-optim(para, garch_loglikelihood, gr=NULL, as.numeric(portfolio_B_return),0)
+port_B_para$par
+
+#Using the maximized parameters to calculate GARCH(1,1) variance and valatility
+
+#Portfolio A
+omega_A <-port_A_para$par[1]
+alpha_A <-port_A_para$par[2]
+beta_A <-port_A_para$par[3]
+expect_return_A<- portfolio_A_return - mean(portfolio_A_return)
+expect_return_A_2 <-expect_return_A^2
+
+nobs_A<-length(portfolio_A_return) #Number of observations 
+predvar_A<-rep(NA,nobs_A) 
+predvar_A[1]<-var(portfolio_A_return) #Start the loop with variance of portfolio A
+#Loop starting at 2 because of the lagged predictor
+for(i in 2:nobs){
+  predvar_A[i]<- omega_A + alpha_A*expect_return_A_2[i-1] + beta_A * predvar_A[i-1]
+}
+
+#Predicted variance 
+predvar_A<-xts(predvar_A, order.by = time(portfolio_A_return))
+plot.zoo(predvar_A,main = "GARCH(1,1) Variance of Portfolio A", col = "blue",
+         lwd = 2, xlab = "Time", ylab = "Variance")
+#Predicted volatility
+predvol_A<-sqrt(predvar_A)
+predvol_A<-xts(predvol_A,order.by=time(portfolio_A_return))
+plot.zoo(predvol_A, main = "GARCH(1,1) Volatility of Portfolio A", col = "brown",
+         lwd = 2, xlab = "Time", ylab = "Volatility")
+
+#-------------------------------------------------------------------------------------
+#Portfolio B
+omega_B <-port_B_para$par[1]
+alpha_B <-port_B_para$par[2]
+beta_B <-port_B_para$par[3]
+
+expect_return_B<- portfolio_B_return - mean(portfolio_B_return)
+expect_return_B_2 <-expect_return_B^2
+
+nobs_B<-length(portfolio_B_return) #Number of observations 
+predvar_B<-rep(NA,nobs_B) 
+predvar_B[1]<-var(portfolio_B_return) #Start the loop with variance of portfolio B
+#Loop starting at 2 because of the lagged predictor
+for(i in 2:nobs){
+  predvar_B[i]<- omega_B + alpha_B*expect_return_B_2[i-1] + beta_B * predvar_B[i-1]
+}
+#Predicted variance 
+predvar_B<-xts(predvar_B, order.by = time(portfolio_B_return))
+plot.zoo(predvar_B,main = "GARCH(1,1) Variance of Portfolio B", col = "blue",
+         lwd = 2, xlab = "Time", ylab = "Variance")
+#Predicted volatility
+predvol_B<-sqrt(predvar_B)
+predvol_B<-xts(predvol_B,order.by=time(portfolio_B_return))
+plot.zoo(predvol_B, main = "GARCH(1,1) Volatility of Portfolio B", col = "brown",
+         lwd = 2, xlab = "Time", ylab = "Volatility")
+
+#--------------------------------------------------------------------------------
+#Plot volatility of both portfolio using GARCH (1,1) and EWMA applying maximum likelihood method
+
+#Portfolio A
+EWMA_port_A <- ewmaVol(portfolio_A_return, lambda=0.9318299)
+EWMA_vol_A<- EWMA_port_A$sigma
+
+EWMA_garch_A<-merge.xts(garchvol_A,EWMA_vol_A)
+plot.zoo(EWMA_garch_A,main = "Volatility of Portfolio A with maximum likelihood estimators",xlab="Date",
+         screen=factor(1,1), col = c("steelblue","brown"),lwd = 2)
+  legend("topleft",
+       legend=c("EWMA (lambda = 0.9318)","GARCH(1,1)"),
+       col=c("steelblue","brown"),
+       lty=c(1,1))
+
+
+#Portfolio B
+EWMA_port_B <- ewmaVol(portfolio_B_return, lambda=0.9397357)
+EWMA_vol_B<- EWMA_port_B$sigma
+
+EWMA_garch_B <-merge.xts(garchvol_B,EWMA_vol_B)
+plot.zoo(EWMA_garch_B,main = "Volatility of Portfolio B with maximum likelihood estimators",xlab = "Date",
+         screen=factor(1,1), col = c("steelblue","brown"),lwd = 2)
+legend("topleft",
+       legend=c("EWMA (lambda = 0.9397)","GARCH(1,1)"),
+       col=c("steelblue","brown"),
+       lty=c(1,1))
+
+#============================================
+
+#Point 14.3
+# A: UPDATE Value at Risk Calculatations
+#We should also update points 7 and 8 considering new data till December 23rd, 2020, to update the  Value at Risk using both ways
+
+
+#POINT 7
+
+#calculate means for 10 days
+mean_A_updated <- mean(portfolio_A_return_updated) * sqrt(10)
+mean_B_updated <- mean(portfolio_B_return_updated) * sqrt(10)
+
+#calculate variance
+variance_A_updated <- var(portfolio_A_return_updated)
+variance_B_updated <- var(portfolio_B_return_updated)
+
+#calculate standard deviation for 10 days
+standarddev_A_updated <- sqrt(variance_A_updated) * sqrt(10)
+standarddev_B_updated <- sqrt(variance_B_updated) * sqrt(10)
+
+#95% VaR
+VaR_A95_updated <- mean_A_updated - 1.645 * standarddev_A_updated 
+VaR_B95_updated <- mean_B_updated - 1.645 * standarddev_B_updated
+
+#99% VaR
+VaR_A99_updated <- mean_A_updated - 2.33 * standarddev_A_updated 
+VaR_B99_updated <- mean_B_updated - 2.33 * standarddev_B_updated 
+
+#show 10-day VaRs
+VaR_A95_updated
+VaR_B95_updated
+VaR_A99_updated
+VaR_B99_updated
+
+#Alternative solution to #POINT 7
+#load ggplot2 library
+library(ggplot2)
+
+#calculate portfolio B probabilities, mean and standard deviation
+portfolio_B_probabilities_updated <- c(0.05,0.01)
+portfolio_B_mean_updated <- mean(portfolio_B_return_updated)
+portfolio_B_sd_updated <- sd(portfolio_B_return_updated)
+
+#calculate VaR for portfolio B and print the outcome
+portfolio_B_VaR_updated <- qnorm(portfolio_B_probabilities_updated, portfolio_B_mean_updated, portfolio_B_sd_updated)
+print(portfolio_B_VaR_updated)
+
+
+#Specify 10 days
+days_updated <- sqrt(10)
+portfolio_B_VaR_10days_updated <- portfolio_B_VaR_updated * days_updated
+
+#Calculate portfolio A probabilities, mean and standard deviation
+portfolio_A_probabilities_updated <- c(0.05, 0.01)
+portfolio_A_mean_updated <- mean(portfolio_A_return_updated)
+portfolio_A_sd_updated <- sd(portfolio_A_return_updated)
+
+#calculate portfolio A VaR andprint the outcome
+portfolio_A_VaR_updated <- qnorm(portfolio_A_probabilities_updated, portfolio_A_mean_updated, portfolio_A_sd_updated)
+print(portfolio_A_VaR_updated)
+
+#Specify 10 days
+portfolio_A_VaR_10days_updated <- portfolio_A_VaR_updated * days_updated
+
+#============================================
+
+#POINT 8
+
+#HISTORICAL SIMULATION - METHODOLOGY 
+
+#METHOD 1 - quantile()
+
+#PORTFOLIO A
+
+#Convert to matrix datatype as zoo datatypes can't be sorted, then sort ascending 
+pf_A_returns.m_updated <- as.matrix(portfolio_A_return_updated)
+pf_A_returns.m_updated
+sorted_A_updated <- pf_A_returns.m_updated[order(pf_A_returns.m_updated[,1])] 
+sorted_A_updated
+
+#Calculate the 10-day VaR, confidence level = 95%
+round(quantile(sorted_A_updated, 0.05, na.rm=TRUE), 4)*sqrt(10)
+
+#Calculate the 10-day VaR, confidence level = 99%
+round(quantile(sorted_A_updated, 0.01, na.rm=TRUE), 4)*sqrt(10)
+
+#PORTFOLIO B
+
+#Convert to matrix datatype as zoo datatypes can't be sorted, then sort ascending 
+pf_B_returns.m_updated <- as.matrix(portfolio_B_return_updated)
+pf_B_returns.m_updated
+sorted_B_updated <- pf_B_returns.m_updated[order(pf_B_returns.m_updated[,1])] 
+sorted_B_updated
+
+#Calculate the 10-day VaR, confidence level = 95%
+round(quantile(sorted_B_updated, 0.05, na.rm=TRUE), 4)*sqrt(10)
+
+#Calculate the 10-day VaR, confidence level = 99%
+round(quantile(sorted_B_updated, 0.01, na.rm=TRUE), 4)*sqrt(10)
+
+#-------------------------------------------
+#METHOD 2: VaR() with method = "historical"
+
+#PORTFOLIO A
+#Calculate the 10-day VaR, confidence level = 95%
+VaR(portfolio_A_return_updated,p=0.95,method="historical")*sqrt(10)
+#Calculate the 10-day VaR, confidence level = 99%
+VaR(portfolio_A_return_updated,p=0.99,method="historical")*sqrt(10)
+
+#PORTFOLIO B
+#Calculate the 10-day VaR, confidence level = 95%
+VaR(portfolio_B_return_updated,p=0.95,method="historical")*sqrt(10)
+#Calculate the 10-day VaR, confidence level = 99%
+VaR(portfolio_B_return_updated,p=0.99,method="historical")*sqrt(10)
+
+#=====================================
+
+#MONTE CARLO SIMULATION - METHODOLOGY 
+
+#PORTFOLIO A
+
+#Create simulation: 
+for (i in 1:1000) {
+  #Create Vector of Returns
+  l_updated<-c()
+  #Generate Future Returns
+  new_Return_A_updated = rnorm(n=1000,mean=mean(portfolio_A_return_updated),sd=sd(portfolio_A_return_updated))
+  #Append return to vector
+  l_updated<-c(l_updated,new_Return_A_updated)
+  
+  #Create Data frame
+  if(i == 1){df=data.frame(l_updated)}
+  else{df<-cbind(l_updated,df)} #Append simulation to dataframe
+}
+#Rename Columns
+for (i in 1:ncol(df)) {
+  col.name <- paste("Simulation",toString(i))
+  names(df)[i] <- col.name
+}
+#Calculate VaR
+future_returns_A_updated <- tail(df,1)
+future_returns_A_updated <- sort(future_returns_A_updated)
+
+#Get Stock Returns at different percentiles
+#quantile fnc produces sameple quantiles corresponding to the given probabilities
+VaR95_A_updated<-quantile(future_returns_A_updated,probs = .05)*sqrt(10) #95% confidence level
+VaR99_A_updated<-quantile(future_returns_A_updated,probs = .01)*sqrt(10) #99% confidence level
+VaR95_A_updated
+VaR99_A_updated
+#-------------------------------
+#PORTFOLIO B
+
+#Create simulation: 
+for (i in 1:1000) {
+  #Create Vector of Returns
+  l_updated<-c()
+  #Generate Future Returns
+  new_Return_B_updated = rnorm(n=1000,mean=mean(portfolio_B_return_updated),sd=sd(portfolio_B_return_updated))
+  #Append return to vector
+  l_updated<-c(l,new_Return_B_updated)
+  
+  #Create Data frame
+  if(i == 1){df=data.frame(l_updated)}
+  else{df<-cbind(l_updated,df)} #Append simulation to dataframe
+}
+#Rename Columns
+for (i in 1:ncol(df)) {
+  col.name <- paste("Simulation",toString(i))
+  names(df)[i] <- col.name
+}
+#Calculate VaR
+future_returns_B_updated <- tail(df,1)
+future_returns_B_updated <- sort(future_returns_B_updated)
+
+
+#Get Stock Returns at different percentiles
+#quantile fnc produces sameple quantiles corresponding to the given probabilities
+VaR95_B_updated<-quantile(future_returns_B_updated,probs = .05)*sqrt(10) #95% confidence level
+VaR99_B_updated<-quantile(future_returns_B_updated,probs = .01)*sqrt(10) #99% confidence level
+VaR95_B_updated
+VaR99_B_updated
+
+
+# B: CALCULATE RETURNS FOR PORTFOLIO A AND B BETWEEN Dec 14 and Dec 23
+
+our_updated_portfolio_10dprechristmas <-our_updated_portfolio ["2020-12-10/2020-12-23"]
+our_updated_portfolio_10dprechristmas
+
+#calculate logarithmic daily returns
+log_returns_updated_10dprechristmas <- diff(log(our_updated_portfolio_10dprechristmas), lag=1)
+log_returns_updated_10dprechristmas
+
+#count missing values
+sum(is.na(log_returns_updated_10dprechristmas))
+
+#omit missing data again
+log_returns_updated_10dprechristmas<-na.omit(log_returns_updated_10dprechristmas)
+
+#check whether there's still missing data
+sum(is.na(log_returns_updated_10dprechristmas)) 
+
+#see log daily returns
+log_returns_updated_10dprechristmas
+
+
+#install package to calculate daily logarithmic returns 
+install.packages("PerformanceAnalytics")
+library("PerformanceAnalytics")
+
+#calculate daily logarithmic returns for the given assets, plot them and check the last lines 
+portfolio_A_return_updated_10dprechristmas <- Return.portfolio(log_returns_updated_10dprechristmas, weights=NULL, value=1000000)
+plot.zoo(portfolio_A_return_updated_10dprechristmas, main = "Log Portfolio A Returns")
+print(portfolio_A_return_updated_10dprechristmas)
+tail(portfolio_A_return_updated_10dprechristmas)
+
+#install package and create a mean-variance efficient portfolio 
+install.packages ("tseries")
+library(tseries)
+
+
+portfolio_B_updated_10dprechristmas <- portfolio.optim(log_returns_updated_10dprechristmas, riskless=FALSE, shorts=FALSE, covmat = cov_matrix_updated)
+class(portfolio_B_updated_10dprechristmas)
+
+#create a vector of weights from optimized portfolio
+portfolio_B_weights_updated_10dprechristmas <- portfolio_B_updated_10dprechristmas$pw
+plot(portfolio_B_weights_updated_10dprechristmas)
+
+#assign asset names for portfolio weights
+names(portfolio_B_weights_updated_10dprechristmas)<-colnames(log_returns_updated_10dprechristmas)
+
+#visualize the distribution of optimized portfolio
+barplot(portfolio_B_weights_updated_10dprechristmas)
+
+#portfolio B return with given weights
+portfolio_B_return_updated_10dprechristmas <- Return.portfolio(log_returns_updated_10dprechristmas,weights = portfolio_B_weights_updated_10dprechristmas,verbose = FALSE)
+portfolio_B_return_updated_10dprechristmas
+plot.zoo(portfolio_B_return_updated_10dprechristmas, main = "Portfolio B Returns")
+
+
+# C COMPARISON
+VaR95_A_updated
+VaR99_A_updated
+sum(portfolio_A_return_updated_10dprechristmas)
+
+
+VaR95_B_updated
+VaR99_B_updated
+sum(portfolio_B_return_updated_10dprechristmas)
